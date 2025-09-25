@@ -1,0 +1,112 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h1 class="text-2xl font-bold">{{ trip.title }}</h1>
+    <div style="display:flex;gap:8px">
+      <a href="/" class="btn">{{ L["back"] }}</a>
+      <a href="/trips/{{ trip.id }}/edit" class="btn">{{ L["edit"] }}</a>
+      <form method="post" action="/trips/{{ trip.id }}/delete" onsubmit="return confirm('{{ L['delete_trip_confirm'] }}')">
+        <button class="btn btn-danger">{{ L["delete_trip"] }}</button>
+      </form>
+    </div>
+  </div>
+
+  {% if trip.start_date or trip.end_date or trip.description %}
+  <div class="card muted" style="margin-bottom:12px">
+    {% if trip.start_date %}{{ L["start_date_label"] }}: {{ trip.start_date }}{% endif %}
+    {% if trip.end_date %}{% if trip.start_date %} · {% endif %}{{ L["end_date_label"] }}: {{ trip.end_date }}{% endif %}
+    {% if trip.description %}<div style="margin-top:4px">{{ L["description_label"] }}: {{ trip.description }}</div>{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="muted" style="margin-bottom:8px">{{ L["sort_hint"] }}</div>
+
+  <ul id="items" style="list-style:none;padding:0;display:grid;gap:12px">
+    {% for it in items %}
+      <li class="card" draggable="true" data-id="{{ it.id }}">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+          <div style="min-width:0">
+            <div style="font-weight:700">{{ it.title }}</div>
+            <div class="muted">
+              {% if it.date %}{{ L["date_label"] }}: {{ it.date }}{% endif %}
+              {% if it.time %}{% if it.date %} · {% endif %}{{ L["time_label"] }}: {{ it.time }}{% endif %}
+            </div>
+            {% if it.note %}<div class="muted" style="margin-top:4px">{{ L["note_label"] }}: {{ it.note }}</div>{% endif %}
+          </div>
+          <div class="shrink-0" style="display:flex;gap:8px">
+            <button type="button" class="btn edit-btn" data-id="{{ it.id }}">{{ L["edit"] }}</button>
+            <form method="post" action="/trips/{{ trip.id }}/items/{{ it.id }}/delete" onsubmit="return confirm('{{ L['delete_item_confirm'] }}')">
+              <button class="btn btn-danger">{{ L["delete"] }}</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 編輯表單：預設隱藏 -->
+        <form method="post" action="/trips/{{ trip.id }}/items/{{ it.id }}/edit"
+              class="edit-form hidden" style="display:none;margin-top:12px;display:grid;gap:10px">
+          <input class="chip" name="title" value="{{ it.title }}" placeholder="{{ L['title_ph'] }}" required />
+          <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr">
+            <input class="chip" name="date" value="{{ it.date or '' }}" placeholder="{{ L['date_ph'] }}" />
+            <input class="chip" name="time" value="{{ it.time or '' }}" placeholder="{{ L['time_ph'] }}" />
+          </div>
+          <textarea class="chip" name="note" placeholder="{{ L['note_ph'] }}">{{ it.note or '' }}</textarea>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary">{{ L["save"] }}</button>
+            <button type="button" class="btn cancel-edit" data-id="{{ it.id }}">{{ L["cancel"] }}</button>
+          </div>
+        </form>
+      </li>
+    {% else %}
+      <li class="muted">{{ L["no_items"] }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2 style="font-size:20px;font-weight:700;margin:18px 0 10px">{{ L["add_item"] }}</h2>
+  <form method="post" action="/trips/{{ trip.id }}/items" class="card" style="display:grid;gap:10px">
+    <input  class="chip" type="text" name="title"    placeholder="{{ L['title_ph'] }}" required />
+    <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr">
+      <input class="chip" type="text" name="date_str" placeholder="{{ L['date_ph'] }}" />
+      <input class="chip" type="text" name="time"     placeholder="{{ L['time_ph'] }}" />
+    </div>
+    <textarea class="chip" name="note" placeholder="{{ L['note_ph'] }}"></textarea>
+    <button class="btn btn-primary">{{ L["save"] }}</button>
+  </form>
+
+  <script>
+    // 拖拉排序
+    const list = document.getElementById('items');
+    let dragging;
+    list.addEventListener('dragstart', e=>{
+      const li = e.target.closest('li[draggable="true"]'); if(!li) return;
+      dragging = li; li.style.opacity=.6; e.dataTransfer.effectAllowed='move';
+    });
+    list.addEventListener('dragend', e=>{
+      if(dragging){ dragging.style.opacity=1; dragging=null; }
+      const ids = Array.from(list.querySelectorAll('li[draggable="true"]')).map(li=>li.dataset.id);
+      fetch('/api/trips/{{ trip.id }}/items/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})}).catch(()=>{});
+    });
+    list.addEventListener('dragover', e=>{
+      e.preventDefault();
+      const after=getAfter(list,e.clientY);
+      const d=dragging; if(!d) return;
+      if(after==null) list.appendChild(d); else list.insertBefore(d, after);
+    });
+    function getAfter(container,y){
+      const els=[...container.querySelectorAll('li[draggable="true"]:not([style*="opacity: 0.6"])')];
+      return els.reduce((c,ch)=>{const b=ch.getBoundingClientRect();const o=y-b.top-b.height/2;return (o<0&&o>c.offset)?{offset:o,element:ch}:c},{offset:-Infinity}).element;
+    }
+
+    // 編輯表單切換
+    document.querySelectorAll('.edit-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const f = btn.closest('li').querySelector('.edit-form');
+        f.style.display = (f.style.display === 'none' || !f.style.display) ? 'grid' : 'none';
+      });
+    });
+    document.querySelectorAll('.cancel-edit').forEach(btn=>{
+      btn.addEventListener('click',()=>{ btn.closest('.edit-form').style.display='none'; });
+    });
+  </script>
+{% endblock %}
+
+

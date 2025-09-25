@@ -1,0 +1,113 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <div class="row" style="justify-content:space-between;margin-bottom:10px">
+    <h2 style="margin:0">{{ trip.title }}</h2>
+    <div class="row">
+      <a class="btn" href="/trips">{{ L["back"] }}</a>
+      <form method="post" action="/trips/{{ trip.id }}/delete" onsubmit="return confirm('{{ L['delete_trip_confirm'] }}')" style="margin:0">
+        <button class="btn" style="color:#b91c1c;border-color:#fecaca;background:#fff5f5">{{ L["delete_trip"] }}</button>
+      </form>
+    </div>
+  </div>
+
+  {% if trip.start_date or trip.end_date or trip.description %}
+  <div class="card" style="margin-bottom:10px">
+    {% if trip.start_date %}<div>{{ L["start_date_label"] }}: {{ trip.start_date }}</div>{% endif %}
+    {% if trip.end_date %}<div>{{ L["end_date_label"] }}: {{ trip.end_date }}</div>{% endif %}
+    {% if trip.description %}<div class="muted" style="margin-top:6px">{{ trip.description }}</div>{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="muted" style="margin-bottom:8px">{{ L["sort_hint"] }}</div>
+
+  <ul id="items" class="grid">
+    {% for it in items %}
+      <li class="card" draggable="true" data-id="{{ it.id }}">
+        <div class="row" style="justify-content:space-between">
+          <div style="min-width:0">
+            <div style="font-weight:600">{{ it.title }}</div>
+            <div class="muted" style="margin-top:4px">
+              {% if it.date %}{{ L["date_label"] }}: {{ it.date }}{% endif %}
+              {% if it.time %}{% if it.date %} · {% endif %}{{ L["time_label"] }}: {{ it.time }}{% endif %}
+            </div>
+            {% if it.note %}<div class="muted" style="margin-top:4px">{{ L["note_label"] }}: {{ it.note }}</div>{% endif %}
+          </div>
+          <div class="row">
+            <button type="button" class="btn edit-btn">{{ L["edit"] }}</button>
+            <form method="post" action="/trips/{{ trip.id }}/items/{{ it.id }}/delete" onsubmit="return confirm('{{ L['delete_item_confirm'] }}')" style="margin:0">
+              <button class="btn" style="color:#b91c1c;border-color:#fecaca;background:#fff5f5">{{ L["delete"] }}</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 行内編集フォーム（既定は非表示） -->
+        <form method="post" action="/trips/{{ trip.id }}/items/{{ it.id }}/edit" class="edit-form hidden" style="margin-top:10px">
+          <input name="title" value="{{ it.title }}" placeholder="{{ L['title_ph'] }}" required />
+          <div class="row">
+            <input name="date_str" value="{{ it.date or '' }}" placeholder="{{ L['date_ph'] }}" />
+            <input name="time" value="{{ it.time or '' }}" placeholder="{{ L['time_ph'] }}" />
+          </div>
+          <textarea name="note" placeholder="{{ L['note_ph'] }}">{{ it.note or '' }}</textarea>
+          <div class="row" style="margin-top:6px">
+            <button class="btn btn-primary">{{ L["save"] }}</button>
+            <button type="button" class="btn cancel-btn">{{ L["cancel"] }}</button>
+          </div>
+        </form>
+      </li>
+    {% else %}
+      <li class="muted">{{ L["no_items"] }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3 style="margin-top:16px">{{ L["items"] }}</h3>
+  <div class="card">
+    <form method="post" action="/trips/{{ trip.id }}/items" class="grid">
+      <input name="title" placeholder="{{ L['title_ph'] }}" required />
+      <div class="row">
+        <input name="date_str" placeholder="{{ L['date_ph'] }}" />
+        <input name="time" placeholder="{{ L['time_ph'] }}" />
+      </div>
+      <textarea name="note" placeholder="{{ L['note_ph'] }}"></textarea>
+      <button class="btn btn-primary">{{ L["save"] }}</button>
+    </form>
+  </div>
+
+  <script>
+    // --- 項目のドラッグ並べ替え ---
+    const list = document.getElementById('items');
+    let dragging;
+    list.addEventListener('dragstart', e => {
+      const li = e.target.closest('li[draggable="true"]'); if(!li) return;
+      dragging = li; li.style.opacity=.6; e.dataTransfer.effectAllowed='move';
+    });
+    list.addEventListener('dragend', e => {
+      if(dragging) dragging.style.opacity=1;
+      const ids = [...list.querySelectorAll('li[draggable="true"]')].map(li=>+li.dataset.id);
+      fetch('/trips/{{ trip.id }}/items/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})}).catch(()=>{});
+      dragging=null;
+    });
+    list.addEventListener('dragover', e => {
+      e.preventDefault();
+      const li = e.target.closest('li[draggable="true"]'); if(!li || li===dragging) return;
+      const rect = li.getBoundingClientRect();
+      const after = (e.clientY - rect.top) > rect.height/2;
+      list.insertBefore(dragging, after ? li.nextSibling : li);
+    });
+
+    // --- 行内編集トグル ---
+    list.querySelectorAll('.edit-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const card = btn.closest('li');
+        const form = card.querySelector('.edit-form');
+        form.classList.toggle('hidden');
+      });
+    });
+    list.querySelectorAll('.cancel-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const card = btn.closest('li');
+        const form = card.querySelector('.edit-form');
+        form.classList.add('hidden');
+      });
+    });
+  </script>
+{% endblock %}

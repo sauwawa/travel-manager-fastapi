@@ -1,0 +1,15 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-2xl font-bold mb-4">{{ L["login_title"] }}</h1>
+  {% if error %}<div class="card" style="border-color:#fecaca;color:#b91c1c;background:#fff5f5">{{ error }}</div>{% endif %}
+
+  <form method="post" action="/login" class="card" style="display:grid;gap:12px;max-width:600px">
+    <input class="chip" type="text"     name="login_id"  placeholder="{{ L['login_id'] }}"  required />
+    <input class="chip" type="password" name="password"  placeholder="{{ L['password'] }}" required />
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary">{{ L["login"] }}</button>
+      <a class="btn" href="/register">{{ L["go_register"] }}</a>
+      <a class="btn" href="/">{{ L["cancel"] }}</a>
+    </div>
+  </form>
+{% endblock %}

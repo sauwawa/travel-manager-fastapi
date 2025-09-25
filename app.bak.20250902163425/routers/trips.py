@@ -1,0 +1,128 @@
+﻿from fastapi import APIRouter, Depends, HTTPException, Request, Form, Body
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
+from sqlmodel import select, Session
+from typing import List
+from app.db import get_session
+from app.models import Trip, ItineraryItem
+from app.i18n import get_lang, get_L
+
+router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
+
+@router.get("/")
+def list_trips_page(request: Request, session: Session = Depends(get_session)):
+    # 未登入就導去 /login（帶 next）
+    if not request.cookies.get("username"):
+        return RedirectResponse(url=f"/login?next={request.url.path}", status_code=303)
+    trips = session.exec(select(Trip)).all()
+    L = get_L(get_lang(request))
+    return templates.TemplateResponse("trips_list.html", {"request": request, "trips": trips, "L": L})
+
+@router.get("/trips/new")
+def new_trip_page(request: Request):
+    L = get_L(get_lang(request))
+    return templates.TemplateResponse("trip_new.html", {"request": request, "L": L})
+
+@router.post("/trips")
+def create_trip_action(
+    title: str = Form(...),
+    start_date_str: str | None = Form(None),
+    end_date_str: str | None = Form(None),
+    description: str | None = Form(None),
+    session: Session = Depends(get_session),
+):
+    if not title.strip():
+        raise HTTPException(400, "Title required")
+    trip = Trip(
+        title=title.strip(),
+        start_date=start_date or None,
+        end_date=end_date or None,
+        description=description or None,
+    )
+    session.add(trip)
+    session.commit()
+    session.refresh(trip)
+    return RedirectResponse(url=f"/trips/{trip.id}", status_code=303)
+
+@router.get("/trips/{trip_id}")
+def trip_detail_page(trip_id: int, request: Request, session: Session = Depends(get_session)):
+    if not request.cookies.get("username"):
+        return RedirectResponse(url=f"/login?next={request.url.path}", status_code=303)
+    trip = session.get(Trip, trip_id)
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    items = session.exec(select(ItineraryItem).where(ItineraryItem.trip_id == trip_id)).all()
+    L = get_L(get_lang(request))
+    return templates.TemplateResponse("trip_detail.html", {"request": request, "trip": trip, "items": items, "L": L})
+
+@router.post("/trips/{trip_id}/items")
+def add_item_action(
+    trip_id: int,
+    title: str = Form(...),
+    date_str: str | None = Form(None),  # 對應頁面上的 name="date_str"
+    time: str | None = Form(None),
+    note: str | None = Form(None),
+    session: Session = Depends(get_session),
+):
+    if not session.get(Trip, trip_id):
+        raise HTTPException(404, "Trip not found")
+    item = ItineraryItem(
+        trip_id=trip_id,
+        title=title.strip(),
+        date=date_str or None,
+        time=time or None,
+        note=note or None,
+    )
+    session.add(item)
+    session.commit()
+    return RedirectResponse(url=f"/trips/{trip_id}", status_code=303)
+
+@router.post("/trips/{trip_id}/items/{item_id}/edit")
+def edit_item_action(
+    trip_id: int,
+    item_id: int,
+    title: str = Form(...),
+    date_str: str | None = Form(None),
+    time: str | None = Form(None),
+    note: str | None = Form(None),
+    session: Session = Depends(get_session),
+):
+    item = session.get(ItineraryItem, item_id)
+    if not item or item.trip_id != trip_id:
+        raise HTTPException(404, "Item not found")
+    item.title = title.strip()
+    item.date = date_str or None
+    item.time = time or None
+    item.note = note or None
+    session.add(item)
+    session.commit()
+    return RedirectResponse(url=f"/trips/{trip_id}", status_code=303)
+
+@router.post("/trips/{trip_id}/items/{item_id}/delete")
+def delete_item_action(trip_id: int, item_id: int, session: Session = Depends(get_session)):
+    item = session.get(ItineraryItem, item_id)
+    if item:
+        session.delete(item)
+        session.commit()
+    return RedirectResponse(url=f"/trips/{trip_id}", status_code=303)
+
+@router.post("/trips/{trip_id}/delete")
+def delete_trip_action(trip_id: int, session: Session = Depends(get_session)):
+    trip = session.get(Trip, trip_id)
+    if trip:
+        session.delete(trip)
+        session.commit()
+    return RedirectResponse(url="/", status_code=303)
+
+# 拖拉排序（先回 200，之後要持久化再加欄位處理）
+@router.post("/api/trips/reorder")
+async def reorder_trips(payload: dict = Body(...)):
+    _ids = payload.get("ids") or []
+    return {"ok": True}
+
+@router.post("/api/trips/{trip_id}/items/reorder")
+async def reorder_items(trip_id: int, payload: dict = Body(...)):
+    _ids = payload.get("ids") or []
+    return {"ok": True}
+

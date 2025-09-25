@@ -1,0 +1,51 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <div class="row" style="justify-content:space-between;margin-bottom:10px">
+    <h2 style="margin:0">{{ L["trip_list"] }}</h2>
+    <div class="muted">{{ L["sort_hint"] }}</div>
+  </div>
+
+  {% if not trips %}
+    <div class="card">{{ L["no_trips"] }}</div>
+  {% else %}
+    <div id="trips" class="grid grid-3">
+      {% for t in trips %}
+        <a class="card" href="/trips/{{ t.id }}" draggable="true" data-id="{{ t.id }}">
+          <div style="font-weight:600">{{ t.title }}</div>
+          {% if t.start_date or t.end_date %}
+            <div class="muted" style="margin-top:6px">
+              {% if t.start_date %}{{ L["start_date_label"] }}: {{ t.start_date }}{% endif %}
+              {% if t.end_date %}{% if t.start_date %} · {% endif %}{{ L["end_date_label"] }}: {{ t.end_date }}{% endif %}
+            </div>
+          {% endif %}
+          {% if t.description %}<div class="muted" style="margin-top:6px">{{ t.description }}</div>{% endif %}
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <script>
+    // 旅行カードのドラッグ並べ替え
+    const grid = document.getElementById('trips');
+    if (grid){
+      let dragging = null;
+      grid.addEventListener('dragstart', e => {
+        const el = e.target.closest('[draggable="true"]'); if(!el) return;
+        dragging = el; el.style.opacity = .6;
+      });
+      grid.addEventListener('dragend', e => {
+        if(dragging){ dragging.style.opacity = 1; }
+        const ids = [...grid.querySelectorAll('[draggable="true"]')].map(el=>+el.dataset.id);
+        fetch('/trips/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})}).catch(()=>{});
+        dragging = null;
+      });
+      grid.addEventListener('dragover', e => {
+        e.preventDefault();
+        const el = e.target.closest('[draggable="true"]'); if(!el || el===dragging) return;
+        const rect = el.getBoundingClientRect();
+        const after = (e.clientY - rect.top) > rect.height/2;
+        grid.insertBefore(dragging, after ? el.nextSibling : el);
+      });
+    }
+  </script>
+{% endblock %}

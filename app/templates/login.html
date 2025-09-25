@@ -1,0 +1,89 @@
+﻿<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ L.get('login_title','ログイン') }}</title>
+  <link rel="stylesheet" href="/static/auth.css" />
+  <script defer src="/static/auth.js"></script>
+</head>
+<body class="page-login">
+  <!-- 右上語言列（含高亮） -->
+  <nav class="topbar">
+    {% set cur = request.cookies.get('lang','ja') %}
+    <a class="{{ 'active' if cur=='ja' else '' }}" href="/lang?set=ja&next={{ request.url.path }}">日本語</a>
+    <a class="{{ 'active' if cur=='en' else '' }}" href="/lang?set=en&next={{ request.url.path }}">English</a>
+    <a class="{{ 'active' if cur in ['zh','zh-Hant'] else '' }}" href="/lang?set=zh-Hant&next={{ request.url.path }}">繁體中文</a>
+    <a class="{{ 'active' if cur=='zh-Hans' else '' }}" href="/lang?set=zh-Hans&next={{ request.url.path }}">简体中文</a>
+  </nav>
+
+  <div class="auth-wrap">
+    <div class="card">
+      <aside class="aside">
+        <div>
+          <h1>{{ L.get('brand','旅行管理') }}</h1>
+          <p>{{ L.get('login_subtitle','旅の計画を、シンプルに。') }}</p>
+        </div>
+      </aside>
+
+      <main class="main">
+        {% if msg %}<div class="msg">{{ msg }}</div>{% endif %}
+
+        <form method="post" action="/login" class="stack">
+
+          <div class="row">
+            <input
+              name="login_id"
+              placeholder="{{ L.get('login_id','ログインID') }}"
+              autocomplete="username"        
+              required
+              autofocus
+            />     
+          </div>
+
+          <div class="row">
+            <input
+              type="password"
+              id="login_pw"
+              name="password"
+              placeholder="{{ L.get('password','パスワード') }}"
+              autocomplete="current-password"
+              required
+            />
+            <!-- eye / eye-off 切換按鈕（配合 /static/auth.js） -->
+            <button
+              class="eye-btn"
+              type="button"
+              data-target="login_pw"
+              aria-label="{{ L.get('show_pw','パスワードを表示') }}"
+              data-label-show="{{ L.get('show_pw','パスワードを表示') }}"
+              data-label-hide="{{ L.get('hide_pw','パスワードを非表示') }}"
+            >
+              <!-- eye -->
+              <svg class="icon-eye" viewBox="0 0 24 24" width="20" height="20" fill="none"
+                   stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <!-- eye-off -->
+              <svg class="icon-eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none"
+                   stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M3 3L21 21"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="btn">{{ L.get('login','ログイン') }}</button>
+            <a class="auth-link" href="/register">{{ L.get('to_register','新規登録へ') }}</a>
+          </div>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  
+</body>
+</html>

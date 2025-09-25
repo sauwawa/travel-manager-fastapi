@@ -1,0 +1,56 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-2xl font-bold mb-3">{{ L["trip_list"] }}</h1>
+  <div class="muted mb-3">{{ L["sort_hint"] }}</div>
+
+  <ul id="trips" style="list-style:none;padding:0;display:grid;gap:12px">
+    {% for t in trips %}
+      <li class="card" draggable="true" data-id="{{ t.id }}">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+          <div style="min-width:0">
+            <div style="font-weight:700;font-size:18px;word-break:break-word">
+              <a href="/trips/{{ t.id }}">{{ t.title }}</a>
+            </div>
+            <div class="muted" style="margin-top:4px">
+              {% if t.start_date %}{{ L["start_date_label"] }}: {{ t.start_date }}{% endif %}
+              {% if t.end_date %}{% if t.start_date %} · {% endif %}{{ L["end_date_label"] }}: {{ t.end_date }}{% endif %}
+            </div>
+            {% if t.description %}<div class="muted" style="margin-top:4px">{{ t.description }}</div>{% endif %}
+          </div>
+          <div class="shrink-0" style="display:flex;gap:8px">
+            <a class="btn" href="/trips/{{ t.id }}/edit">{{ L["edit"] }}</a>
+            <form method="post" action="/trips/{{ t.id }}/delete" onsubmit="return confirm('{{ L['delete_trip_confirm'] }}')">
+              <button class="btn btn-danger">{{ L["delete_trip"] }}</button>
+            </form>
+          </div>
+        </div>
+      </li>
+    {% else %}
+      <li class="muted">{{ L["no_trips"] }}</li>
+    {% endfor %}
+  </ul>
+
+  <script>
+    const list = document.getElementById('trips');
+    let dragging;
+    list.addEventListener('dragstart', e=>{
+      const li = e.target.closest('li[draggable="true"]'); if(!li) return;
+      dragging = li; li.style.opacity=.6; e.dataTransfer.effectAllowed='move';
+    });
+    list.addEventListener('dragend', e=>{
+      if(dragging){ dragging.style.opacity=1; dragging=null; }
+      const ids = Array.from(list.querySelectorAll('li[draggable="true"]')).map(li=>li.dataset.id);
+      fetch('/api/trips/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})}).catch(()=>{});
+    });
+    list.addEventListener('dragover', e=>{
+      e.preventDefault();
+      const after = getAfter(list, e.clientY);
+      const draggingEl = dragging; if(!draggingEl) return;
+      if(after==null) list.appendChild(draggingEl); else list.insertBefore(draggingEl, after);
+    });
+    function getAfter(container,y){
+      const els=[...container.querySelectorAll('li[draggable="true"]:not([style*="opacity: 0.6"])')];
+      return els.reduce((c,ch)=>{const b=ch.getBoundingClientRect();const o=y-b.top-b.height/2;return (o<0&&o>c.offset)?{offset:o,element:ch}:c},{offset:-Infinity}).element;
+    }
+  </script>
+{% endblock %}

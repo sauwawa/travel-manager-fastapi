@@ -1,0 +1,17 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-2xl font-bold mb-4">{{ L["register_title"] }}</h1>
+  {% if error %}<div class="card" style="border-color:#fecaca;color:#b91c1c;background:#fff5f5">{{ error }}</div>{% endif %}
+  <form method="post" action="/register" class="card" style="display:grid;gap:12px;max-width:700px">
+    <input class="chip" type="text"     name="login_id"      placeholder="{{ L['login_id'] }}"      required />
+    <input class="chip" type="password" name="password"      placeholder="{{ L['password'] }}"      required />
+    <input class="chip" type="text"     name="username"      placeholder="{{ L['username_label'] }}" required />
+    <input class="chip" type="email"    name="email"         placeholder="{{ L['email'] }}"         required />
+    <input class="chip" type="email"    name="email_confirm" placeholder="{{ L['email_confirm'] }}" required />
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary">{{ L["register_submit"] }}</button>
+      <a class="btn" href="/login">{{ L["go_login"] }}</a>
+      <a class="btn" href="/">{{ L["cancel"] }}</a>
+    </div>
+  </form>
+{% endblock %}

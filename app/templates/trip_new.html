@@ -1,0 +1,18 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <div class="card" style="max-width:640px;margin:0 auto">
+    <h2 style="margin-top:0">{{ L["new"] }}</h2>
+    <form method="post" action="/trips" class="grid">
+      <input name="title" placeholder="{{ L['title_ph'] }}" required />
+      <div class="row">
+        <input name="start_date" placeholder="{{ L['start_date_ph'] }}" />
+        <input name="end_date" placeholder="{{ L['end_date_ph'] }}" />
+      </div>
+      <textarea name="description" placeholder="{{ L['description_ph'] }}"></textarea>
+      <div class="row">
+        <button class="btn btn-primary">{{ L["create"] }}</button>
+        <a class="btn" href="/trips">{{ L["back"] }}</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

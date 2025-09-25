@@ -1,0 +1,168 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="wrap-narrow">
+
+  <!-- 日本語コメント: ヘッダ右側のボタン郡（戻る／旅行編集トグル／削除） -->  
+
+  <div class="headbar">
+    <h1 class="text-2xl font-bold">{{ trip.title }}</h1>
+
+    <div class="actions">
+      <!-- 戻る -->
+    <a href="/trips" class="btn btn-sm">{{ L["back"] }}</a>
+
+      <!-- 旅行全体の編集トグル（旅行タイトル／説明などを編集するとき用） -->
+    <button type="button" class="btn btn-sm" id="trip-edit-toggle">{{ L["edit"] }}  
+    </button>
+
+    <!-- 旅行を削除（送信前に確認ダイアログを出す） -->
+    <form method="post" 
+            action="/trips/{{ trip.id }}/delete"
+            onsubmit="return confirm('{{ L['delete_trip_confirm'] }}')"
+            style="display:inline">
+    <button type="submit" class="btn btn-sm btn-danger">{{ L["delete_trip"] }}
+    </button>   
+    </form>  
+  </div>
+</div>
+
+
+
+  </div>
+
+  {% if trip.start_date or trip.end_date or trip.description %}
+  <div class="card" style="margin-bottom:10px">
+    {% if trip.start_date %}<div>{{ L["start_date_label"] }}: {{ trip.start_date }}</div>{% endif %}
+    {% if trip.end_date %}<div>{{ L["end_date_label"] }}: {{ trip.end_date }}</div>{% endif %}
+    {% if trip.description %}<div class="muted" style="margin-top:6px">{{ trip.description }}</div>{% endif %}
+  </div>
+  {% endif %}
+
+  <!-- 日本語コメント: 旅行（タイトル／開始／終了／説明）の就地編集フォーム。初期は hidden -->
+  <form id="trip-edit-form" method="post" action="/trips/{{ trip.id }}/edit"
+      class="hidden bg-white rounded-xl shadow p-4 mb-6 space-y-3">
+    <input class="border rounded p-2 w-full" name="title" value="{{ trip.title }}"
+         placeholder="{{ L['title_ph'] }}" required />
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <input class="border rounded p-2 w-full" name="start_date"
+           value="{{ trip.start_date or '' }}" placeholder="{{ L['start_date_ph'] }}" />
+      <input class="border rounded p-2 w-full" name="end_date"
+           value="{{ trip.end_date or '' }}" placeholder="{{ L['end_date_ph'] }}" />
+    </div>
+    <textarea class="border rounded p-2 w-full" name="description"
+            placeholder="{{ L['description_ph'] }}">{{ trip.description or '' }}</textarea>
+    <div class="flex gap-2">
+      <button class="btn btn-primary">{{ L["save"] }}</button>
+      <button type="button" id="trip-edit-cancel" class="btn">{{ L["cancel"] }}</button>
+    </div>
+  </form>
+ 
+
+  <div class="muted" style="margin-bottom:8px">{{ L["sort_hint"] }}</div>
+  
+  <h2 class="text-xl font-semibold mb-3">{{ L["items"] }}</h2>
+
+  <ul id="items" class="grid">
+    {% for it in items %}
+      <li class="card" draggable="true" data-id="{{ it.id }}">
+        <div class="row" style="justify-content:space-between">
+          <div style="min-width:0">
+            <div style="font-weight:600">{{ it.title }}</div>
+            <div class="muted" style="margin-top:4px">
+              {% if it.date %}{{ L["date_label"] }}: {{ it.date }}{% endif %}
+              {% if it.time %}{% if it.date %} · {% endif %}{{ L["time_label"] }}: {{ it.time }}{% endif %}
+            </div>
+            {% if it.note %}<div class="muted" style="margin-top:4px">{{ L["note_label"] }}: {{ it.note }}</div>{% endif %}
+          </div>
+          <div class="row">
+            <button type="button" class="btn edit-btn">{{ L["edit"] }}</button>
+            <form method="post" action="/trips/{{ trip.id }}/items/{{ it.id }}/delete" onsubmit="return confirm('{{ L['delete_item_confirm'] }}')" style="margin:0">
+              <button class="btn" style="color:#b91c1c;border-color:#fecaca;background:#fff5f5">{{ L["delete"] }}</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 行内編集フォーム（既定は非表示） -->
+        <form method="post" action="/trips/{{ trip.id }}/items/{{ it.id }}/edit" class="edit-form hidden" style="margin-top:10px">
+          <input name="title" value="{{ it.title }}" placeholder="{{ L['title_ph'] }}" required />
+          <div class="row">
+            <input name="date_str" value="{{ it.date or '' }}" placeholder="{{ L['date_ph'] }}" />
+            <input name="time" value="{{ it.time or '' }}" placeholder="{{ L['time_ph'] }}" />
+          </div>
+          <textarea name="note" placeholder="{{ L['note_ph'] }}">{{ it.note or '' }}</textarea>
+          <div class="row" style="margin-top:6px">
+            <button class="btn btn-primary">{{ L["save"] }}</button>
+            <button type="button" class="btn cancel-btn">{{ L["cancel"] }}</button>
+          </div>
+        </form>
+      </li>
+    {% else %}
+      <li class="muted">{{ L["no_items"] }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3 style="margin-top:16px">{{ L["items"] }}</h3>
+  <div class="card">
+    <form method="post" action="/trips/{{ trip.id }}/items" class="grid">
+      <input name="title" placeholder="{{ L['title_ph'] }}" required />
+      <div class="row">
+        <input name="date_str" placeholder="{{ L['date_ph'] }}" />
+        <input name="time" placeholder="{{ L['time_ph'] }}" />
+      </div>
+      <textarea name="note" placeholder="{{ L['note_ph'] }}"></textarea>
+      <button class="btn btn-primary">{{ L["save"] }}</button>
+    </form>
+  </div>
+
+  <script>
+     // 日本語コメント: 旅行ヘッダの編集フォームの開閉
+    const tripToggle = document.getElementById('trip-edit-toggle');
+    const tripForm   = document.getElementById('trip-edit-form');
+    const tripCancel = document.getElementById('trip-edit-cancel');
+    if (tripToggle && tripForm) { tripToggle.addEventListener('click', ()=> tripForm.classList.toggle('hidden')); }
+    if (tripCancel && tripForm) { tripCancel.addEventListener('click', ()=> tripForm.classList.add('hidden')); }
+
+
+
+    // --- 項目のドラッグ並べ替え ---
+    const list = document.getElementById('items');
+    let dragging;
+    list.addEventListener('dragstart', e => {
+      const li = e.target.closest('li[draggable="true"]'); if(!li) return;
+      dragging = li; li.style.opacity=.6; e.dataTransfer.effectAllowed='move';
+    });
+    list.addEventListener('dragend', e => {
+      if(dragging) dragging.style.opacity=1;
+      const ids = [...list.querySelectorAll('li[draggable="true"]')].map(li=>+li.dataset.id);
+      fetch('/trips/{{ trip.id }}/items/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})}).catch(()=>{});
+      dragging=null;
+    });
+    list.addEventListener('dragover', e => {
+      e.preventDefault();
+      const li = e.target.closest('li[draggable="true"]'); if(!li || li===dragging) return;
+      const rect = li.getBoundingClientRect();
+      const after = (e.clientY - rect.top) > rect.height/2;
+      list.insertBefore(dragging, after ? li.nextSibling : li);
+    });
+
+    // --- 行内編集トグル ---
+    list.querySelectorAll('.edit-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const card = btn.closest('li');
+        const form = card.querySelector('.edit-form');
+        form.classList.toggle('hidden');
+      });
+    });
+    list.querySelectorAll('.cancel-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const card = btn.closest('li');
+        const form = card.querySelector('.edit-form');
+        form.classList.add('hidden');
+      });
+    });
+
+
+  </script>
+
+</div> 
+{% endblock %}

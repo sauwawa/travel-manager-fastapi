@@ -1,0 +1,127 @@
+﻿<!doctype html>
+<!-- app/templates/base.html -->
+<html lang="ja">
+<head>
+  <link rel="stylesheet" href="app/static/app.css">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ L["app_title"] }}</title>
+  <style>
+    /* パスワード欄の小眼ボタン用スタイル */ 
+    .pw-field{ position:relative; }
+    .pw-field .pw-toggle{
+    position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    border:none; background:transparent; cursor:pointer; padding:4px;
+    line-height:1; font-size:16px; color:#64748b;
+    }
+    .pw-field .pw-toggle:focus{ outline:2px solid #c7d2fe; border-radius:6px; }
+
+    /* 最小限のカード風スタイル */
+    :root { --bg:#ebebd3; --border:#e5e7eb; --text:#111; --muted:#64748b; --brand:#2563eb; }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--text); margin:0;}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+    .brand{font-weight:800;font-size:22px;line-height:1.1;display:flex;gap:12px;align-items:center}
+    .muted{color:var(--muted)}
+    .wrap{max-width:980px;margin:18px auto;padding:0 16px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-size:14px;line-height:1;height:36px;box-sizing:border-box;}
+    .btn-primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+    .btn-sm{padding:6px 12px; height:36px;font-size:14px;}
+    .card{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:14px}
+    .grid{display:grid;gap:14px}
+    .grid-3{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+    .hidden{display:none}
+    a{color:inherit;text-decoration:none}
+    a:hover{opacity:.9}
+    input,textarea{border:1px solid var(--border);border-radius:10px;padding:8px;width:100%}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+    /* 見出し行：左邊標題，右邊操作ボタンを横並びにする */
+    .headbar{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+    .headbar .actions{margin-left:auto;display:flex;gap:10px;align-items:center;}
+    /* ヘッダ右側のアクション列：form を flex 子要素として中央揃えにする */
+    .headbar .actions > * { margin: 0; }                     /* form の既定 margin を消す */
+    .headbar .actions > form { display: inline-flex; align-items: center; }
+    .headbar .actions > form > .btn { height: 36px; }        /* ほかのボタンと同じ高さに固定 */
+
+    /* 既にあれば追加不要。削除ボタンのやさしい赤 */
+    .btn-danger{color:#b91c1c;background:#fff5f5;border:1px solid #fecaca;}
+
+    /* ▼ ページ個別でさらに細くしたい時に使う補助コンテナ */
+    .wrap-narrow{
+    max-width: 820px;      /* このページだけ更に狭く */
+    margin: 0 auto;
+    padding: 0;            /* 外側 .wrap に任せるなら 0 のままでOK */
+    }
+    /* a / button 在不同瀏覽器字型繼承不同，強制一致 */
+    button, input[type="button"], input[type="submit"]{
+    font: inherit;
+    }
+
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">
+      {% set uid = request.session.get('login_id') %}
+      {% if uid %}
+        {{ (L["owner_app_fmt"] | replace("{name}", uid) | replace("{app}", L["app_title"])) }}
+        <a href="/trips" class="muted">/ {{ L["home"] }}</a>
+      {% else %}
+        {{ L["app_title"] }}
+      {% endif %}
+    </div>
+    <div class="row">
+      <span>🌐</span>
+      <a href="/lang?code=ja">{{ L["lang_ja"] }}</a> |
+      <a href="/lang?code=en">{{ L["lang_en"] }}</a> |
+      <a href="/lang?code=zh-Hant">{{ L["lang_zh_hant"] }}</a> |
+      <a href="/lang?code=zh-Hans">{{ L["lang_zh_hans"] }}</a>
+      {% if uid %}
+        <form method="post" action="/logout" style="margin:0">
+          <button class="btn">{{ L["logout"] }}</button>
+        </form>
+        <a class="btn" href="/trips/new">{{ L["new"] }}</a>
+      {% else %}
+        <a class="btn" href="/login">{{ L["login"] }}</a>
+        <a class="btn" href="/register">{{ L["register"] }}</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <div class="wrap">
+    {% block content %}{% endblock %}
+  </div>
+
+<!--  すべての .pw-toggle ボタンに可視化/非表示の切替を付与 -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.pw-toggle').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const targetId = btn.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        if(!input) return;
+
+        const showLabel = btn.getAttribute('data-label-show') || 'Show';
+        const hideLabel = btn.getAttribute('data-label-hide') || 'Hide';
+
+        const hidden = (input.type === 'password');
+        input.type = hidden ? 'text' : 'password';
+        btn.setAttribute('aria-label', hidden ? hideLabel : showLabel);
+
+        // if (input.type === 'password') {
+        //   input.type = 'text';
+        //   btn.setAttribute('aria-label', hideLabel);
+        //   btn.textContent = '🙈'; // 日本語コメント: 非表示アイコン
+        // } else {
+        //   input.type = 'password';
+        //   btn.setAttribute('aria-label', showLabel);
+        //   btn.textContent = '👁'; // 日本語コメント: 表示アイコン
+        
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

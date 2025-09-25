@@ -1,0 +1,4 @@
+/* 登入後整站底色 */
+:root { --app-bg: #EBE2E5; --app-text: #111827; }
+html, body { min-height: 100%; }
+body { margin: 0; background: var(--app-bg); color: var(--app-text); }
